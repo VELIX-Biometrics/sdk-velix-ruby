@@ -7,10 +7,12 @@ require "json"
 require_relative "config"
 require_relative "error"
 require_relative "retry"
+require_relative "modules/onboarding"
 require_relative "modules/checkin"
-require_relative "modules/persons"
+require_relative "modules/lgpd"
+require_relative "modules/me"
 require_relative "modules/events"
-require_relative "modules/tenants"
+require_relative "modules/time"
 
 module Velix
   class Client
@@ -23,10 +25,14 @@ module Velix
                            timeout: timeout, max_retries: max_retries)
     end
 
-    def checkin   = @checkin   ||= Modules::Checkin.new(self)
-    def persons   = @persons   ||= Modules::Persons.new(self)
-    def events    = @events    ||= Modules::Events.new(self)
-    def tenants   = @tenants   ||= Modules::Tenants.new(self)
+    def onboarding = @onboarding ||= Modules::Onboarding.new(self)
+    def checkin    = @checkin    ||= Modules::Checkin.new(self)
+    def lgpd       = @lgpd       ||= Modules::Lgpd.new(self)
+    def me         = @me         ||= Modules::Me.new(self)
+    def events     = @events     ||= Modules::Events.new(self)
+
+    # Velix Time has no endpoint under /v1/api/* yet — see modules/time.rb.
+    def time = @time ||= Modules::Time.new(self)
 
     def get(path, params = {})
       uri = build_uri(path, params)

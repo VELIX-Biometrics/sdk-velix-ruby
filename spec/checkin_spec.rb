@@ -7,37 +7,52 @@ RSpec.describe Velix::Modules::Checkin do
     Velix::Client.new(api_url: "https://api.velixbiometrics.com", api_key: "vx_test_key")
   end
 
-  describe "#facial" do
-    it "returns passed true on successful identify" do
-      stub_velix(:post, "/v1/checkin/acme/identify",
-                 { "passed" => true, "personId" => "uuid-123", "personName" => "João Silva", "confidence" => 0.92 })
+  describe "#identify" do
+    it "returns matched true on successful identify" do
+      stub_velix(:post, "/v1/api/checkin/identify",
+                 { "matched" => true, "person_id" => "uuid-123", "quality_score" => 0.92,
+                   "message" => "ok" })
 
-      result = client.checkin.facial("acme", "base64framedata")
+      result = client.checkin.identify(image_base64: "base64framedata")
 
-      expect(result.passed).to be true
+      expect(result.matched).to be true
       expect(result.person_id).to eq("uuid-123")
-      expect(result.person_name).to eq("João Silva")
-      expect(result.confidence).to eq(0.92)
+      expect(result.quality_score).to eq(0.92)
     end
 
-    it "returns passed false when face not recognized" do
-      stub_velix(:post, "/v1/checkin/acme/identify",
-                 { "passed" => false, "personId" => nil, "personName" => nil, "confidence" => 0.0 })
+    it "returns matched false when face not recognized" do
+      stub_velix(:post, "/v1/api/checkin/identify",
+                 { "matched" => false, "person_id" => nil, "quality_score" => 0.0,
+                   "message" => "not found" })
 
-      result = client.checkin.facial("acme", "base64framedata")
+      result = client.checkin.identify(image_base64: "base64framedata")
 
-      expect(result.passed).to be false
+      expect(result.matched).to be false
       expect(result.person_id).to be_nil
     end
-  end
 
-  describe "#qr" do
-    it "identifies via QR code" do
-      stub_velix(:post, "/v1/checkin/acme/identify",
-                 { "passed" => true, "personId" => "uuid-456", "personName" => "Maria", "confidence" => nil })
+    it "sends liveness block mapped to wire camelCase field names" do
+      stub_velix(:post, "/v1/api/checkin/identify",
+                 { "matched" => true, "person_id" => "uuid-456", "quality_score" => 0.8,
+                   "message" => "ok" })
 
-      result = client.checkin.qr("acme", "QR_CODE_VALUE")
-      expect(result.passed).to be true
+      client.checkin.identify(
+        image_base64: "frame",
+        top_k: 3,
+        liveness: {
+          token: "nonce-abc",
+          samples: [{ action: "center", image_base64: "sample1" }]
+        }
+      )
+
+      expect(a_request(:post, "https://api.velixbiometrics.com/v1/api/checkin/identify")
+        .with(body: hash_including(
+          "topK" => 3,
+          "liveness" => hash_including(
+            "token" => "nonce-abc",
+            "samples" => [hash_including("action" => "center", "imageBase64" => "sample1")]
+          )
+        ))).to have_been_made.once
     end
   end
 end

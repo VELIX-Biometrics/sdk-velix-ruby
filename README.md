@@ -1,6 +1,9 @@
 # velix-sdk — Ruby SDK ![version](https://img.shields.io/badge/version-0.1.0--alpha1-orange)
 
-> ⚠️ **Alpha / pre-release.** This SDK targets a public API surface that does not yet fully exist on the VELIX backend (see internal task #593). Endpoints and auth may not work against production. Do not use in production integrations yet.
+> ⚠️ **Alpha / pre-release.** This SDK targets the real API-key-protected surface of the
+> VELIX backend (`/v1/api/*`, see `public-api.yaml` task #593). Only six endpoints exist
+> today; everything else (Velix Time included) is intentionally not implemented. Do not
+> use in production integrations yet.
 
 Official Ruby SDK for the VELIX Biometrics platform — facial access control B2B SaaS.
 
@@ -39,108 +42,110 @@ client = Velix::Client.new(
   api_key: ENV["VELIX_API_KEY"]
 )
 
-result = client.checkin.facial("tenant-slug", frame_base64)
-puts result.passed ? "GRANTED" : "DENIED"
+result = client.checkin.identify(image_base64: frame_base64)
+puts result.matched ? "GRANTED" : "DENIED"
 ```
+
+Auth is sent as `x-api-key: vlx_<hex>` on every request (the API also accepts
+`Authorization: Bearer vlx_<hex>` as an alternative, but the SDK always uses the
+`x-api-key` header).
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VELIX_API_URL` | Yes | API base URL (`https://api.velixbiometrics.com`) |
-| `VELIX_API_KEY` | Yes | Tenant API key (`vx_live_...` or `vx_sandbox_...`) |
+| `VELIX_API_KEY` | Yes | Integrator API key (`vlx_...`) |
 
 ## Modules
 
-| Module | Methods |
-|--------|---------|
-| `client.checkin` | `facial()`, `qr()`, `pin()`, `get_history()` |
-| `client.persons` | `list()`, `get()`, `create()`, `update()`, `delete()`, `enroll()` |
-| `client.events` | `list()`, `get()`, `create()`, `configure()` |
-| `client.tenants` | `me()`, `update_settings()` |
+The API-key surface has exactly six real endpoints, one per method below. There is no
+list/update/delete for persons, events, or tenants under `/v1/api/*` — do not expect
+those methods.
+
+| Module | Method | Endpoint | Scope |
+|--------|--------|----------|-------|
+| `client.onboarding` | `create()` | `POST /v1/api/onboarding` | `onboarding:write` |
+| `client.checkin` | `identify()` | `POST /v1/api/checkin/identify` | `checkin:write` |
+| `client.lgpd` | `create_deletion_request()` | `POST /v1/api/deletion-request` | `lgpd:write` |
+| `client.me` | `find()` | `GET /v1/api/me/{personId}` | `me:read` |
+| `client.events` | `create_guest()` | `POST /v1/api/events/{id}/guests` | `events:write` |
+| `client.events` | `get_guest()` | `GET /v1/api/events/{id}/guests/{guestId}` | `events:read` |
+
+`client.time` exists only as a stub that raises `NotImplementedError` — Velix Time has
+no endpoint under `/v1/api/*` yet (see spec note "Velix Time — COBERTURA PARCIAL").
+
+## Onboarding Module
+
+```ruby
+result = client.onboarding.create(
+  name: "João Silva",
+  frames: [frame1_base64, frame2_base64, frame3_base64], # min 1, tenant-configured minimum
+  email: "joao@company.com",
+  external_id: "EMP-001" # upserts by external key when provided
+)
+# result.person_id         => "uuid"
+# result.identity_id       => "uuid"
+# result.enrolled          => true
+# result.frames_processed  => 3
+# result.frames_results    => [...]
+```
 
 ## Checkin Module
 
 ```ruby
-checkin = client.checkin
-
-# Facial identification (base64 JPEG frame)
-result = checkin.facial("tenant-slug", frame_base64)
-# result.passed      => true
-# result.person_id   => "uuid"
-# result.person_name => "João Silva"
-
-# QR code checkin
-result = checkin.qr("tenant-slug", qr_token)
-
-# PIN checkin
-result = checkin.pin("tenant-slug", pin)
-
-# Paginated history
-history = checkin.get_history("tenant-slug", page: 1, limit: 20)
-# history.items  => [...]
-# history.total  => 142
+result = client.checkin.identify(
+  image_base64: frame_base64,
+  top_k: 3,
+  liveness: {
+    token: challenge_token, # from GET /v1/public/checkin/{tenantSlug}/liveness/challenge
+    samples: [{ action: "center", image_base64: sample_base64 }]
+  }
+)
+# result.matched       => true
+# result.person_id     => "uuid"
+# result.quality_score => 0.92
 ```
 
-## Persons Module
+Liveness score is never returned by the API — only `matched`/`quality_score` are
+exposed, by design.
+
+## LGPD Module
 
 ```ruby
-persons = client.persons
+result = client.lgpd.create_deletion_request(person_id: "uuid")
+# result.protocol_number => "PROTO-123"
+```
 
-# List with optional search
-list = persons.list(page: 1, limit: 20, search: "João")
+## Me Module
 
-# Get by ID
-person = persons.get("uuid")
-
-# Create
-created = persons.create(
-  name:        "João Silva",
-  email:       "joao@company.com",
-  external_id: "EMP-001"
-)
-
-# Update
-persons.update("uuid", name: "João B. Silva")
-
-# Enroll biometrics (minimum 3 base64 frames)
-persons.enroll("uuid", [frame1, frame2, frame3])
-
-# Delete
-persons.delete("uuid")
+```ruby
+person = client.me.find("uuid")
+# person.id, person.name, person.email, person.phone, person.photo_url, person.created_at
 ```
 
 ## Events Module
 
 ```ruby
-events = client.events
+guest = client.events.create_guest("event-uuid", name: "Ana", email: "ana@empresa.com")
+# guest.id, guest.event_id, guest.status, guest.category_id
 
-list    = events.list(page: 1, limit: 20)
-event   = events.get("uuid")
-created = events.create(name: "Annual Conference 2026", date: "2026-09-01")
-events.configure("uuid", check_in_open: true, require_liveness: true)
-```
-
-## Tenants Module
-
-```ruby
-tenant = client.tenants.me
-client.tenants.update_settings(require_liveness: true, biometric_quality_level: "high")
+guest = client.events.get_guest("event-uuid", "guest-uuid")
 ```
 
 ## Error Handling
 
 ```ruby
 begin
-  result = client.checkin.facial("slug", frame)
+  result = client.checkin.identify(image_base64: frame)
 rescue Velix::AuthError
   puts "Invalid API key"
 rescue Velix::BiometricError => e
   puts "Face not recognized: #{e.message}"
 rescue Velix::RateLimitError => e
-  puts "Rate limit — retry after #{e.retry_after}s"
+  puts "Rate limit: #{e.message}"
 rescue Velix::VelixError => e
-  puts "HTTP #{e.status_code}: #{e.message}"
+  puts "HTTP #{e.status}: #{e.message}"
 end
 ```
 
