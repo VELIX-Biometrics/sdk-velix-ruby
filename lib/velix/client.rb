@@ -93,22 +93,26 @@ module Velix
 
     def handle_response(response)
       body = parse_body(response.body)
+      # Envelope de erro real: {"success":false,"error":{"code":"...","message":"..."}}.
+      # body["message"] no nível raiz não existe — ficava sempre no fallback
+      # genérico, mascarando a mensagem real da API.
+      message = body.is_a?(Hash) ? body.dig("error", "message") || body["message"] : nil
 
       case response.code.to_i
       when 200, 201, 204
         body.is_a?(Hash) && body.key?("data") ? body["data"] : body
       when 401, 403
-        raise AuthError.new(body["message"] || "Unauthorized", status: response.code.to_i)
+        raise AuthError.new(message || "Unauthorized", status: response.code.to_i)
       when 404
-        raise NotFoundError.new(body["message"] || "Not found", status: 404)
+        raise NotFoundError.new(message || "Not found", status: 404)
       when 422
-        raise BiometricError.new(body["message"] || "Unprocessable", status: 422)
+        raise BiometricError.new(message || "Unprocessable", status: 422)
       when 429
-        raise RateLimitError.new(body["message"] || "Rate limit exceeded", status: 429)
+        raise RateLimitError.new(message || "Rate limit exceeded", status: 429)
       when 500..599
-        raise ServerError.new(body["message"] || "Server error", status: response.code.to_i)
+        raise ServerError.new(message || "Server error", status: response.code.to_i)
       else
-        raise VelixError.new(body["message"] || "Unexpected error", status: response.code.to_i)
+        raise VelixError.new(message || "Unexpected error", status: response.code.to_i)
       end
     end
 
