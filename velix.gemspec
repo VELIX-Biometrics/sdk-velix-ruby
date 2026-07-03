@@ -13,8 +13,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.metadata["homepage_uri"]      = spec.homepage
-  spec.metadata["source_code_uri"]   = "https://github.com/velix/velix-sdk-ruby"
-  spec.metadata["changelog_uri"]     = "https://github.com/velix/velix-sdk-ruby/blob/main/CHANGELOG.md"
+  spec.metadata["source_code_uri"]   = "https://github.com/VELIX-Biometrics/sdk-velix-ruby"
+  spec.metadata["changelog_uri"]     = "https://github.com/VELIX-Biometrics/sdk-velix-ruby/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
   # Zero runtime dependencies — usa stdlib net/http
