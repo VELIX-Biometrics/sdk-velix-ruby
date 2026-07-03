@@ -1,9 +1,6 @@
 # velix-sdk — Ruby SDK ![version](https://img.shields.io/badge/version-0.1.0--alpha1-orange)
 
-> ⚠️ **Alpha / pre-release.** This SDK targets the real API-key-protected surface of the
-> VELIX backend (`/v1/api/*`, see `public-api.yaml` task #593). Only six endpoints exist
-> today; everything else (Velix Time included) is intentionally not implemented. Do not
-> use in production integrations yet.
+> ⚠️ **Alpha / pre-release**, mas já publicado e confirmado funcionando de ponta a ponta contra a API real de staging (onboarding, LGPD, me, events). **RubyGems:** https://rubygems.org/gems/velix-sdk
 
 Official Ruby SDK for the VELIX Biometrics platform — facial access control B2B SaaS.
 
