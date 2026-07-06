@@ -99,13 +99,14 @@ result = client.checkin.identify(
     samples: [{ action: "center", image_base64: sample_base64 }]
   }
 )
-# result.matched       => true
-# result.person_id     => "uuid"
-# result.quality_score => 0.92
+# result.matched      => true
+# result.subject_id   => "uuid"
+# result.subject_name => "Ana Silva"
+# result.liveness_ok  => true
 ```
 
-Liveness score is never returned by the API — only `matched`/`quality_score` are
-exposed, by design.
+Similarity and liveness scores are never returned by the API — only the
+`matched`/`liveness_ok` booleans are exposed, by design.
 
 ## LGPD Module
 
