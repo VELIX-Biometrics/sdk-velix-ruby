@@ -4,11 +4,11 @@ module Velix
   module Modules
     # POST /v1/api/checkin/identify — scope checkin:write
     #
-    # Liveness score is never returned by the API by design (security rule) —
-    # this endpoint's response only ever reports `matched`, never a raw
-    # liveness/confidence score.
+    # Similarity and liveness scores are never returned by the API by design
+    # (security rule) — this endpoint's response only ever reports the
+    # `matched`/liveness `ok` booleans, never a raw score.
     class Checkin
-      Result = Data.define(:matched, :person_id, :quality_score, :message)
+      Result = Data.define(:matched, :subject_id, :subject_name, :liveness_ok, :model)
 
       def initialize(client)
         @client = client
@@ -29,10 +29,11 @@ module Velix
         resp = @client.post("/v1/api/checkin/identify", body)
 
         Result.new(
-          matched: resp["matched"],
-          person_id: resp["person_id"],
-          quality_score: resp["quality_score"],
-          message: resp["message"]
+          matched: resp["match"],
+          subject_id: resp["subjectId"],
+          subject_name: resp["subjectName"],
+          liveness_ok: resp.dig("liveness", "ok"),
+          model: resp["model"]
         )
       end
 

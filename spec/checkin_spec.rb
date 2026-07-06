@@ -10,31 +10,32 @@ RSpec.describe Velix::Modules::Checkin do
   describe "#identify" do
     it "returns matched true on successful identify" do
       stub_velix(:post, "/v1/api/checkin/identify",
-                 { "matched" => true, "person_id" => "uuid-123", "quality_score" => 0.92,
-                   "message" => "ok" })
+                 { "match" => true, "subjectId" => "uuid-123", "subjectName" => "Ana Silva",
+                   "liveness" => { "ok" => true }, "model" => "adaface" })
 
       result = client.checkin.identify(image_base64: "base64framedata")
 
       expect(result.matched).to be true
-      expect(result.person_id).to eq("uuid-123")
-      expect(result.quality_score).to eq(0.92)
+      expect(result.subject_id).to eq("uuid-123")
+      expect(result.subject_name).to eq("Ana Silva")
+      expect(result.liveness_ok).to be true
     end
 
     it "returns matched false when face not recognized" do
       stub_velix(:post, "/v1/api/checkin/identify",
-                 { "matched" => false, "person_id" => nil, "quality_score" => 0.0,
-                   "message" => "not found" })
+                 { "match" => false, "subjectId" => nil, "subjectName" => nil,
+                   "liveness" => { "ok" => true }, "model" => "adaface" })
 
       result = client.checkin.identify(image_base64: "base64framedata")
 
       expect(result.matched).to be false
-      expect(result.person_id).to be_nil
+      expect(result.subject_id).to be_nil
     end
 
     it "sends liveness block mapped to wire camelCase field names" do
       stub_velix(:post, "/v1/api/checkin/identify",
-                 { "matched" => true, "person_id" => "uuid-456", "quality_score" => 0.8,
-                   "message" => "ok" })
+                 { "match" => true, "subjectId" => "uuid-456", "subjectName" => "Bruno Costa",
+                   "liveness" => { "ok" => true }, "model" => "adaface" })
 
       client.checkin.identify(
         image_base64: "frame",
