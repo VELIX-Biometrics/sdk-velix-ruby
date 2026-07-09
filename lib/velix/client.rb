@@ -13,6 +13,7 @@ require_relative "modules/lgpd"
 require_relative "modules/me"
 require_relative "modules/events"
 require_relative "modules/time"
+require_relative "modules/context"
 
 module Velix
   class Client
@@ -33,6 +34,12 @@ module Velix
 
     # Velix Time has no endpoint under /v1/api/* yet — see modules/time.rb.
     def time = @time ||= Modules::Time.new(self)
+
+    def contexts = @contexts ||= Modules::Context.new(self)
+    def memberships = @memberships ||= Modules::ContextMembership.new(self)
+    def context_roles = @context_roles ||= Modules::ContextRole.new(self)
+    def context_permissions = @context_permissions ||= Modules::ContextPermission.new(self)
+    def authorization_tokens = @authorization_tokens ||= Modules::AuthorizationToken.new(self)
 
     def get(path, params = {})
       uri = build_uri(path, params)
