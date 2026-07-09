@@ -72,6 +72,25 @@ those methods.
 `client.time` exists only as a stub that raises `NotImplementedError` — Velix Time has
 no endpoint under `/v1/api/*` yet (see spec note "Velix Time — COBERTURA PARCIAL").
 
+| `client.contexts` | `create/get/list/update/remove`, `authorize`, `list_authorization_decisions`, `create_link_request` | `/v1/contexts/*` | BearerAuth |
+| `client.memberships` | `create`, `list_by_context`, `list_by_identity`, `update_status`, `add_roles`, `remove_roles` | `/v1/contexts/:id/memberships`, `/v1/identities/:id/memberships`, `/v1/memberships/*` | BearerAuth |
+| `client.context_roles` | `create`, `list`, `link_permissions` | `/v1/context-roles*` | BearerAuth |
+| `client.context_permissions` | `create`, `list` | `/v1/context-permissions` | BearerAuth |
+| `client.authorization_tokens` | `validate` | `POST /v1/authorization-tokens/validate` | BearerAuth |
+
+## Identity Context
+
+```ruby
+context = client.contexts.create(name: "Matriz SP", contextType: "location")
+decision = client.contexts.authorize(context["id"], identityId: identity_id, permission: "access:enter")
+membership = client.memberships.create(context["id"], identityId: identity_id, roleIds: [role_id])
+# context exit (definitive, no grace period)
+client.memberships.update_status(membership["id"], "revoked")
+# cross-tenant link — stays PENDING until the person consents via magic link
+client.contexts.create_link_request(context["id"], identityId: identity_id)
+client.authorization_tokens.validate("vat_...")
+```
+
 ## Onboarding Module
 
 ```ruby
